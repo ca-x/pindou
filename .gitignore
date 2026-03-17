@@ -1,0 +1,57 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+pindou
+
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Logs
+logs/
+*.log
+
+# Build
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+
+# Claude
+.claude/*.db

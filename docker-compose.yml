@@ -1,0 +1,15 @@
+services:
+  pindou:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - DATABASE_PATH=/app/data/pindou.db
+      - SESSION_SECRET=your-secret-key-change-in-production
+    volumes:
+      - pindou-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  pindou-data:
