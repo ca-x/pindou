@@ -1,5 +1,5 @@
 # ── Build Arguments ────────────────────────────────────────────────────────
-ARG GOLANG_VERSION=1.23
+ARG GOLANG_VERSION=1.25
 ARG ALPINE_VERSION=3.21
 
 # ── Stage 1: Build ───────────────────────────────────────────────────────────
