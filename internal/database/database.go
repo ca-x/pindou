@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log"
 
+	_ "github.com/lib-x/entsqlite"
 	"pindou/ent"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func New(dsn string) (*ent.Client, error) {
