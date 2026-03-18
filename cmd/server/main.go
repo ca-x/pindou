@@ -63,6 +63,7 @@ func main() {
 			authGroup.POST("/login", authHandler.Login)
 			authGroup.POST("/logout", authHandler.Logout)
 			authGroup.GET("/me", middleware.Auth(client), authHandler.Me)
+			authGroup.PUT("/profile", middleware.Auth(client), authHandler.UpdateProfile)
 			authGroup.PUT("/password", middleware.Auth(client), authHandler.ChangePassword)
 
 			// OIDC routes

@@ -23,15 +23,21 @@ type ChangePasswordRequest struct {
 type UserResponse struct {
 	ID        string `json:"id"`
 	Username  string `json:"username"`
+	Nickname  string `json:"nickname,omitempty"`
 	CreatedAt string `json:"created_at"`
+}
+
+// UpdateProfileRequest 更新用户资料请求
+type UpdateProfileRequest struct {
+	Nickname string `json:"nickname"`
 }
 
 // DesignRequest 作品请求
 type DesignRequest struct {
-	Title      string       `json:"title"`
-	Width      int          `json:"width"`
-	Height     int          `json:"height"`
-	ColorCount int          `json:"color_count"`
+	Title      string        `json:"title"`
+	Width      int           `json:"width"`
+	Height     int           `json:"height"`
+	ColorCount int           `json:"color_count"`
 	GridData   [][]*CellData `json:"grid_data"`
 }
 

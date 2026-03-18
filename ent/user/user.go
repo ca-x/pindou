@@ -15,6 +15,8 @@ const (
 	FieldID = "id"
 	// FieldUsername holds the string denoting the username field in the database.
 	FieldUsername = "username"
+	// FieldNickname holds the string denoting the nickname field in the database.
+	FieldNickname = "nickname"
 	// FieldPasswordHash holds the string denoting the password_hash field in the database.
 	FieldPasswordHash = "password_hash"
 	// FieldSessionToken holds the string denoting the session_token field in the database.
@@ -33,6 +35,7 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldUsername,
+	FieldNickname,
 	FieldPasswordHash,
 	FieldSessionToken,
 	FieldSessionExpires,
@@ -74,6 +77,11 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByUsername orders the results by the username field.
 func ByUsername(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUsername, opts...).ToFunc()
+}
+
+// ByNickname orders the results by the nickname field.
+func ByNickname(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldNickname, opts...).ToFunc()
 }
 
 // ByPasswordHash orders the results by the password_hash field.

@@ -26,6 +26,20 @@ func (_c *UserCreate) SetUsername(v string) *UserCreate {
 	return _c
 }
 
+// SetNickname sets the "nickname" field.
+func (_c *UserCreate) SetNickname(v string) *UserCreate {
+	_c.mutation.SetNickname(v)
+	return _c
+}
+
+// SetNillableNickname sets the "nickname" field if the given value is not nil.
+func (_c *UserCreate) SetNillableNickname(v *string) *UserCreate {
+	if v != nil {
+		_c.SetNickname(*v)
+	}
+	return _c
+}
+
 // SetPasswordHash sets the "password_hash" field.
 func (_c *UserCreate) SetPasswordHash(v string) *UserCreate {
 	_c.mutation.SetPasswordHash(v)
@@ -208,6 +222,10 @@ func (_c *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Username(); ok {
 		_spec.SetField(user.FieldUsername, field.TypeString, value)
 		_node.Username = value
+	}
+	if value, ok := _c.mutation.Nickname(); ok {
+		_spec.SetField(user.FieldNickname, field.TypeString, value)
+		_node.Nickname = value
 	}
 	if value, ok := _c.mutation.PasswordHash(); ok {
 		_spec.SetField(user.FieldPasswordHash, field.TypeString, value)

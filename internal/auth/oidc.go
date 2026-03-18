@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"pindou/ent"
-	"pindou/ent/user"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/oauth2"
+	"pindou/ent"
+	"pindou/ent/user"
 )
 
 // Environment variable names for OIDC configuration.
@@ -285,11 +285,13 @@ func extractUserIdentity(userInfo map[string]interface{}) (userID, username stri
 
 // findOrCreateUser finds an existing user or creates a new one for OIDC login.
 func (p *OIDCProvider) findOrCreateUser(ctx context.Context, oidcUserID, username string) (*ent.User, error) {
-	// Try to find user by OIDC ID (stored in username field with oidc_ prefix)
-	oidcUsername := "oidc_" + oidcUserID
-
+	// Try to find user by OIDC ID (stored with oidc_ prefix in username)
+	oidcPrefixedID := "oidc_" + oidcUserID
 	u, err := p.client.User.Query().
-		Where(user.Username(oidcUsername)).
+		Where(user.Or(
+			user.Username(oidcPrefixedID),
+			user.Username(username),
+		)).
 		Only(ctx)
 
 	if err == nil {
@@ -301,13 +303,24 @@ func (p *OIDCProvider) findOrCreateUser(ctx context.Context, oidcUserID, usernam
 	}
 
 	// Create new user for OIDC login
-	// Password is empty for OIDC users
+	// Use the username from OIDC provider if available
+	displayName := username
+	if displayName == "" || strings.HasPrefix(displayName, "oidc_") {
+		displayName = "user_" + oidcUserID[:min(8, len(oidcUserID))]
+	}
+
+	// Ensure username is unique
+	existingUser, _ := p.client.User.Query().Where(user.Username(displayName)).Only(ctx)
+	if existingUser != nil {
+		displayName = displayName + "_" + oidcUserID[:min(4, len(oidcUserID))]
+	}
+
 	sessionToken := generateToken()
 	sessionExpires := time.Now().Add(7 * 24 * time.Hour)
 
 	u, err = p.client.User.Create().
 		SetID(generateID()).
-		SetUsername(oidcUsername).
+		SetUsername(displayName).
 		SetPasswordHash("").
 		SetSessionToken(sessionToken).
 		SetSessionExpires(sessionExpires).

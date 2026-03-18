@@ -30,10 +30,9 @@
     <button class="gray-btn" id="btnSave" style="width:auto;padding:5px 12px;display:none" onclick="showSaveModal()">保存</button>
     <button class="gray-btn" id="btnShare" style="width:auto;padding:5px 12px;display:none" onclick="shareDesign()">分享</button>
   </div>
-  <div class="user-info" id="userInfo" style="display:none">
-    <span></span>
-    <button class="auth-btn" id="changePwdBtn" onclick="showChangePwdModal()">修改密码</button>
-    <button class="auth-btn" id="logoutBtn" onclick="logout()">退出</button>
+  <div class="user-info" id="userInfo" style="display:none" onclick="showUserMenu(event)">
+    <div class="avatar" id="userAvatar"></div>
+    <span id="userDisplayName"></span>
   </div>
   <button class="auth-btn primary" id="loginBtn" onclick="showAuthModal('login')">登录</button>
   <button class="auth-btn" id="registerBtn" onclick="showAuthModal('register')">注册</button>
@@ -279,6 +278,46 @@
 
 <!-- Toast Notification -->
 <div class="toast hidden" id="toast"><span id="toastMsg"></span></div>
+
+<!-- User Context Menu -->
+<div class="user-menu hidden" id="userMenu">
+  <div class="user-menu-item" onclick="showSettingsModal()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    设置
+  </div>
+  <div class="user-menu-item" onclick="showChangePwdModal()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    修改密码
+  </div>
+  <div class="user-menu-divider"></div>
+  <div class="user-menu-item danger" onclick="logout()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    退出登录
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="settings-modal hidden" id="settingsModal">
+  <div class="settings-form">
+    <h3>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+      个人设置
+    </h3>
+    <div class="form-group">
+      <label>昵称</label>
+      <input type="text" id="settingsNickname" placeholder="设置你的昵称" maxlength="30">
+      <div class="hint">昵称将显示在界面中，最多30个字符</div>
+    </div>
+    <div class="form-group">
+      <label>用户名</label>
+      <input type="text" id="settingsUsername" disabled style="background:var(--bg2);color:var(--tx3)">
+    </div>
+    <div class="settings-actions">
+      <button class="gray-btn" onclick="hideSettingsModal()">取消</button>
+      <button class="or-btn" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
 
 <!-- Version Footer -->
 <div id="version-footer" style="position:fixed;bottom:8px;right:12px;font-size:11px;color:var(--tx3);opacity:0.7;pointer-events:none"></div>

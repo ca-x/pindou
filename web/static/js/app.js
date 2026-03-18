@@ -70,19 +70,24 @@ async function checkAuth() {
 
 function updateUserUI() {
   const userInfo = document.getElementById('userInfo');
+  const userAvatar = document.getElementById('userAvatar');
+  const userDisplayName = document.getElementById('userDisplayName');
   const loginBtn = document.getElementById('loginBtn');
   const registerBtn = document.getElementById('registerBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
   const myDesigns = document.getElementById('myDesigns');
   const saveBtn = document.getElementById('btnSave');
   const shareBtn = document.getElementById('btnShare');
 
   if (S.user) {
     userInfo.style.display = 'flex';
-    userInfo.querySelector('span').textContent = S.user.username;
+    // Show nickname if available, otherwise show username (truncate if too long)
+    const displayName = S.user.nickname || S.user.username;
+    userDisplayName.textContent = displayName.length > 12 ? displayName.slice(0, 12) + '...' : displayName;
+    userDisplayName.title = displayName;
+    // Avatar shows first character
+    userAvatar.textContent = (displayName.charAt(0) || 'U').toUpperCase();
     loginBtn.style.display = 'none';
     registerBtn.style.display = 'none';
-    logoutBtn.style.display = 'block';
     myDesigns.style.display = 'block';
     saveBtn.style.display = S.grid ? 'block' : 'none';
     shareBtn.style.display = S.currentDesignId ? 'block' : 'none';
@@ -90,7 +95,6 @@ function updateUserUI() {
     userInfo.style.display = 'none';
     loginBtn.style.display = 'block';
     registerBtn.style.display = 'block';
-    logoutBtn.style.display = 'none';
     myDesigns.style.display = 'none';
     saveBtn.style.display = 'none';
     shareBtn.style.display = 'none';
@@ -158,7 +162,70 @@ async function logout() {
   await fetch('/api/auth/logout', {method: 'POST'});
   S.user = null;
   S.currentDesignId = null;
+  hideUserMenu();
   updateUserUI();
+}
+
+// User Context Menu
+function showUserMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('userMenu');
+  menu.classList.remove('hidden');
+
+  // Position menu near the user info
+  const rect = e.currentTarget.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 8) + 'px';
+  menu.style.right = (window.innerWidth - rect.right) + 'px';
+  menu.style.left = 'auto';
+}
+
+function hideUserMenu() {
+  document.getElementById('userMenu').classList.add('hidden');
+}
+
+// Close menu when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.user-menu') && !e.target.closest('.user-info')) {
+    hideUserMenu();
+  }
+});
+
+// Settings Modal
+function showSettingsModal() {
+  hideUserMenu();
+  const modal = document.getElementById('settingsModal');
+  document.getElementById('settingsNickname').value = S.user?.nickname || '';
+  document.getElementById('settingsUsername').value = S.user?.username || '';
+  modal.classList.remove('hidden');
+}
+
+function hideSettingsModal() {
+  document.getElementById('settingsModal').classList.add('hidden');
+}
+
+async function saveSettings() {
+  const nickname = document.getElementById('settingsNickname').value.trim();
+
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({nickname})
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      showToast(data.error || '保存失败', 'error');
+      return;
+    }
+
+    S.user = await res.json();
+    hideSettingsModal();
+    updateUserUI();
+    showToast('设置已保存');
+  } catch(e) {
+    showToast('网络错误', 'error');
+  }
 }
 
 // OIDC Login
@@ -168,6 +235,7 @@ function oidcLogin() {
 
 // Change Password
 function showChangePwdModal() {
+  hideUserMenu();
   document.getElementById('changePwdModal').classList.remove('hidden');
   document.getElementById('oldPassword').value = '';
   document.getElementById('newPassword').value = '';
@@ -774,6 +842,8 @@ document.addEventListener('keydown', e => {
     hideWorksPanel();
     hideAuthModal();
     hideChangePwdModal();
+    hideSettingsModal();
+    hideUserMenu();
   }
   // Enter to confirm save in save modal
   if (e.key === 'Enter' && !document.getElementById('saveModal').classList.contains('hidden')) {

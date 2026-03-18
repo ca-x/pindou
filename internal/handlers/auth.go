@@ -7,11 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"pindou/ent"
 	"pindou/ent/user"
 	"pindou/internal/models"
-	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
@@ -130,7 +130,38 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	c.JSON(http.StatusOK, models.UserResponse{
 		ID:        userEnt.ID,
 		Username:  userEnt.Username,
+		Nickname:  userEnt.Nickname,
 		CreatedAt: userEnt.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	u, _ := c.Get("user")
+	userEnt := u.(*ent.User)
+
+	var req models.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid request"})
+		return
+	}
+
+	// Validate nickname length
+	if len(req.Nickname) > 30 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "nickname too long (max 30 characters)"})
+		return
+	}
+
+	updatedUser, err := userEnt.Update().SetNickname(req.Nickname).Save(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "failed to update profile"})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.UserResponse{
+		ID:        updatedUser.ID,
+		Username:  updatedUser.Username,
+		Nickname:  updatedUser.Nickname,
+		CreatedAt: updatedUser.CreatedAt.Format(time.RFC3339),
 	})
 }
 

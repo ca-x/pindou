@@ -19,6 +19,8 @@ type User struct {
 	ID string `json:"id,omitempty"`
 	// 用户名
 	Username string `json:"username,omitempty"`
+	// 昵称/显示名
+	Nickname string `json:"nickname,omitempty"`
 	// 密码哈希 (OIDC用户可为空)
 	PasswordHash string `json:"password_hash,omitempty"`
 	// 会话令牌
@@ -37,7 +39,7 @@ func (*User) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldID, user.FieldUsername, user.FieldPasswordHash, user.FieldSessionToken:
+		case user.FieldID, user.FieldUsername, user.FieldNickname, user.FieldPasswordHash, user.FieldSessionToken:
 			values[i] = new(sql.NullString)
 		case user.FieldSessionExpires, user.FieldCreatedAt, user.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -67,6 +69,12 @@ func (_m *User) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field username", values[i])
 			} else if value.Valid {
 				_m.Username = value.String
+			}
+		case user.FieldNickname:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field nickname", values[i])
+			} else if value.Valid {
+				_m.Nickname = value.String
 			}
 		case user.FieldPasswordHash:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -136,6 +144,9 @@ func (_m *User) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("username=")
 	builder.WriteString(_m.Username)
+	builder.WriteString(", ")
+	builder.WriteString("nickname=")
+	builder.WriteString(_m.Nickname)
 	builder.WriteString(", ")
 	builder.WriteString("password_hash=")
 	builder.WriteString(_m.PasswordHash)
