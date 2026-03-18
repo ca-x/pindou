@@ -19,7 +19,7 @@ type User struct {
 	ID string `json:"id,omitempty"`
 	// 用户名
 	Username string `json:"username,omitempty"`
-	// 密码哈希
+	// 密码哈希 (OIDC用户可为空)
 	PasswordHash string `json:"password_hash,omitempty"`
 	// 会话令牌
 	SessionToken string `json:"session_token,omitempty"`

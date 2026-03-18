@@ -32,6 +32,14 @@ func (_c *UserCreate) SetPasswordHash(v string) *UserCreate {
 	return _c
 }
 
+// SetNillablePasswordHash sets the "password_hash" field if the given value is not nil.
+func (_c *UserCreate) SetNillablePasswordHash(v *string) *UserCreate {
+	if v != nil {
+		_c.SetPasswordHash(*v)
+	}
+	return _c
+}
+
 // SetSessionToken sets the "session_token" field.
 func (_c *UserCreate) SetSessionToken(v string) *UserCreate {
 	_c.mutation.SetSessionToken(v)
@@ -129,6 +137,10 @@ func (_c *UserCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserCreate) defaults() {
+	if _, ok := _c.mutation.PasswordHash(); !ok {
+		v := user.DefaultPasswordHash
+		_c.mutation.SetPasswordHash(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		v := user.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)

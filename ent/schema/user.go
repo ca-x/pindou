@@ -24,7 +24,8 @@ func (User) Fields() []ent.Field {
 			NotEmpty().
 			Comment("用户名"),
 		field.String("password_hash").
-			Comment("密码哈希"),
+			Default("").
+			Comment("密码哈希 (OIDC用户可为空)"),
 		field.String("session_token").
 			Optional().
 			Comment("会话令牌"),

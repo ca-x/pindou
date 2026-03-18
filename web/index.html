@@ -32,6 +32,7 @@
   </div>
   <div class="user-info" id="userInfo" style="display:none">
     <span></span>
+    <button class="auth-btn" id="changePwdBtn" onclick="showChangePwdModal()">修改密码</button>
     <button class="auth-btn" id="logoutBtn" onclick="logout()">退出</button>
   </div>
   <button class="auth-btn primary" id="loginBtn" onclick="showAuthModal('login')">登录</button>
@@ -213,6 +214,38 @@
     <div class="error-msg" id="authError"></div>
     <button class="or-btn submit-btn" onclick="submitAuth()">登录</button>
     <div class="switch-link">没有账号？<a onclick="showAuthModal('register')">注册</a></div>
+    <div class="oidc-section hidden" id="oidcSection">
+      <div class="oidc-divider"><span>或</span></div>
+      <button class="oidc-btn" onclick="oidcLogin()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        使用懒猫账号登录
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="auth-modal hidden" id="changePwdModal">
+  <div class="auth-form">
+    <h3>修改密码</h3>
+    <div class="form-group" id="oldPwdGroup">
+      <label>旧密码</label>
+      <input type="password" id="oldPassword" placeholder="请输入旧密码">
+      <div class="hint" id="oldPwdHint" style="display:none">OIDC用户首次设置密码可跳过此项</div>
+    </div>
+    <div class="form-group">
+      <label>新密码</label>
+      <input type="password" id="newPassword" placeholder="请输入新密码（6-50位）">
+    </div>
+    <div class="form-group">
+      <label>确认新密码</label>
+      <input type="password" id="confirmPassword" placeholder="请再次输入新密码">
+    </div>
+    <div class="error-msg" id="changePwdError"></div>
+    <div class="save-actions">
+      <button class="gray-btn" onclick="hideChangePwdModal()">取消</button>
+      <button class="or-btn" onclick="submitChangePwd()">确认</button>
+    </div>
   </div>
 </div>
 

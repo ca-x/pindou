@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"strings"
 	"time"
 
 	"pindou/ent"
@@ -71,9 +72,21 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// Prevent OIDC users from logging in with username/password
+	if strings.HasPrefix(req.Username, "oidc_") {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "please use OIDC login for this account"})
+		return
+	}
+
 	u, err := h.client.User.Query().Where(user.Username(req.Username)).Only(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{Error: "invalid credentials"})
+		return
+	}
+
+	// Check if password is set (OIDC users have empty password)
+	if u.PasswordHash == "" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "password not set for this account, please use OIDC login"})
 		return
 	}
 
@@ -119,6 +132,57 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		Username:  userEnt.Username,
 		CreatedAt: userEnt.CreatedAt.Format(time.RFC3339),
 	})
+}
+
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	u, _ := c.Get("user")
+	userEnt := u.(*ent.User)
+
+	var req models.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: "invalid request", Message: err.Error()})
+		return
+	}
+
+	// 如果用户没有密码（OIDC 用户），允许设置新密码
+	if userEnt.PasswordHash == "" {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "failed to hash password"})
+			return
+		}
+
+		_, err = userEnt.Update().SetPasswordHash(string(hashedPassword)).Save(c.Request.Context())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "failed to set password"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "password set successfully"})
+		return
+	}
+
+	// 验证旧密码
+	if err := bcrypt.CompareHashAndPassword([]byte(userEnt.PasswordHash), []byte(req.OldPassword)); err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{Error: "invalid old password"})
+		return
+	}
+
+	// 生成新密码哈希
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "failed to hash password"})
+		return
+	}
+
+	// 更新密码
+	_, err = userEnt.Update().SetPasswordHash(string(hashedPassword)).Save(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: "failed to update password"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "password changed successfully"})
 }
 
 func generateID() string {

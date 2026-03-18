@@ -50,7 +50,7 @@ var (
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "username", Type: field.TypeString, Unique: true},
-		{Name: "password_hash", Type: field.TypeString},
+		{Name: "password_hash", Type: field.TypeString, Default: ""},
 		{Name: "session_token", Type: field.TypeString, Nullable: true},
 		{Name: "session_expires", Type: field.TypeTime, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},

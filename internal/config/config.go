@@ -6,9 +6,17 @@ import (
 )
 
 type Config struct {
-	DatabasePath string
-	Port         string
+	DatabasePath  string
+	Port          string
 	SessionSecret string
+	// OIDC Configuration
+	OIDCClientID     string
+	OIDCClientSecret string
+	OIDCAuthURI      string
+	OIDCTokenURI     string
+	OIDCUserInfoURI  string
+	OIDCRedirectURL  string
+	AppURL           string
 }
 
 func Load() *Config {
@@ -17,9 +25,16 @@ func Load() *Config {
 	os.MkdirAll(dataDir, 0755)
 
 	return &Config{
-		DatabasePath:  filepath.Join(dataDir, "pindou.db"),
-		Port:          getEnv("PORT", "8080"),
-		SessionSecret: getEnv("SESSION_SECRET", "pindou-secret-key-change-in-production"),
+		DatabasePath:     filepath.Join(dataDir, "pindou.db"),
+		Port:             getEnv("PORT", "8080"),
+		SessionSecret:    getEnv("SESSION_SECRET", "pindou-secret-key-change-in-production"),
+		OIDCClientID:     os.Getenv("PINDOU_OIDC_CLIENT_ID"),
+		OIDCClientSecret: os.Getenv("PINDOU_OIDC_CLIENT_SECRET"),
+		OIDCAuthURI:      os.Getenv("PINDOU_OIDC_AUTH_URI"),
+		OIDCTokenURI:     os.Getenv("PINDOU_OIDC_TOKEN_URI"),
+		OIDCUserInfoURI:  os.Getenv("PINDOU_OIDC_USERINFO_URI"),
+		OIDCRedirectURL:  os.Getenv("PINDOU_OIDC_REDIRECT_URL"),
+		AppURL:           getEnv("PINDOU_APP_URL", "http://localhost:8080"),
 	}
 }
 

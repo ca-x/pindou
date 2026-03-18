@@ -1,12 +1,14 @@
 module pindou
 
-go 1.23.0
+go 1.25.0
 
 require (
 	entgo.io/ent v0.14.5
+	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/gin-gonic/gin v1.10.0
 	github.com/mattn/go-sqlite3 v1.14.24
 	golang.org/x/crypto v0.31.0
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (
@@ -20,6 +22,7 @@ require (
 	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.3 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.3 // indirect
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect

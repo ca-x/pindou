@@ -31,6 +31,26 @@ const bc=document.getElementById('bc');
 const ctx=bc.getContext('2d');
 
 // ============ Auth Functions ============
+let oidcEnabled = false;
+
+async function checkOIDCStatus() {
+  try {
+    const res = await fetch('/api/auth/oidc/status');
+    const data = await res.json();
+    oidcEnabled = data.enabled;
+    updateOIDCUI();
+  } catch(e) {
+    oidcEnabled = false;
+  }
+}
+
+function updateOIDCUI() {
+  const oidcSection = document.getElementById('oidcSection');
+  if (oidcSection) {
+    oidcSection.classList.toggle('hidden', !oidcEnabled);
+  }
+}
+
 async function checkAuth() {
   try {
     const res = await fetch('/api/auth/me');
@@ -139,6 +159,77 @@ async function logout() {
   S.user = null;
   S.currentDesignId = null;
   updateUserUI();
+}
+
+// OIDC Login
+function oidcLogin() {
+  window.location.href = '/api/auth/oidc/login';
+}
+
+// Change Password
+function showChangePwdModal() {
+  document.getElementById('changePwdModal').classList.remove('hidden');
+  document.getElementById('oldPassword').value = '';
+  document.getElementById('newPassword').value = '';
+  document.getElementById('confirmPassword').value = '';
+  document.getElementById('changePwdError').textContent = '';
+
+  // Check if OIDC user (username starts with oidc_)
+  if (S.user && S.user.username && S.user.username.startsWith('oidc_')) {
+    document.getElementById('oldPwdHint').style.display = 'block';
+    document.getElementById('oldPassword').placeholder = 'OIDC用户可跳过';
+  } else {
+    document.getElementById('oldPwdHint').style.display = 'none';
+    document.getElementById('oldPassword').placeholder = '请输入旧密码';
+  }
+}
+
+function hideChangePwdModal() {
+  document.getElementById('changePwdModal').classList.add('hidden');
+}
+
+async function submitChangePwd() {
+  const oldPassword = document.getElementById('oldPassword').value;
+  const newPassword = document.getElementById('newPassword').value;
+  const confirmPassword = document.getElementById('confirmPassword').value;
+  const errorEl = document.getElementById('changePwdError');
+
+  if (!newPassword) {
+    errorEl.textContent = '请输入新密码';
+    return;
+  }
+
+  if (newPassword.length < 6 || newPassword.length > 50) {
+    errorEl.textContent = '新密码长度需为6-50位';
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    errorEl.textContent = '两次输入的密码不一致';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/auth/password', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        old_password: oldPassword,
+        new_password: newPassword
+      })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      errorEl.textContent = data.error || '修改失败';
+      return;
+    }
+
+    hideChangePwdModal();
+    showToast(data.message || '密码修改成功');
+  } catch(e) {
+    errorEl.textContent = '网络错误';
+  }
 }
 
 // ============ Design Functions ============
@@ -682,6 +773,7 @@ document.addEventListener('keydown', e => {
     hideSaveModal();
     hideWorksPanel();
     hideAuthModal();
+    hideChangePwdModal();
   }
   // Enter to confirm save in save modal
   if (e.key === 'Enter' && !document.getElementById('saveModal').classList.contains('hidden')) {
@@ -703,6 +795,7 @@ async function loadVersion() {
 }
 
 // ============ Init ============
+checkOIDCStatus();
 checkAuth();
 loadVersion();
 

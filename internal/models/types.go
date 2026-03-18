@@ -12,6 +12,13 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// ChangePasswordRequest 修改密码请求
+// OldPassword 可选，对于没有密码的账户（如OIDC用户）可以不提供
+type ChangePasswordRequest struct {
+	OldPassword string `json:"old_password"`
+	NewPassword string `json:"new_password" binding:"required,min=6,max=50"`
+}
+
 // UserResponse 用户信息响应
 type UserResponse struct {
 	ID        string `json:"id"`

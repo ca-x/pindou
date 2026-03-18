@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"pindou/internal/auth"
 	"pindou/internal/config"
 	"pindou/internal/database"
 	"pindou/internal/handlers"
@@ -23,6 +24,17 @@ func main() {
 	}
 	defer client.Close()
 
+	// Initialize OIDC provider if configured
+	var oidcProvider *auth.OIDCProvider
+	if auth.IsOIDCConfigured() {
+		oidcProvider, err = auth.NewOIDCProvider(client)
+		if err != nil {
+			log.Printf("Warning: Failed to initialize OIDC: %v", err)
+		} else {
+			log.Println("OIDC authentication enabled")
+		}
+	}
+
 	r := gin.Default()
 
 	// Static files from embedded FS
@@ -37,13 +49,27 @@ func main() {
 			c.JSON(200, version.Info())
 		})
 
+		// OIDC status (public)
+		api.GET("/auth/oidc/status", func(c *gin.Context) {
+			c.JSON(200, gin.H{
+				"enabled": oidcProvider != nil,
+			})
+		})
+
 		authHandler := handlers.NewAuthHandler(client, cfg.SessionSecret)
-		auth := api.Group("/auth")
+		authGroup := api.Group("/auth")
 		{
-			auth.POST("/register", authHandler.Register)
-			auth.POST("/login", authHandler.Login)
-			auth.POST("/logout", authHandler.Logout)
-			auth.GET("/me", middleware.Auth(client), authHandler.Me)
+			authGroup.POST("/register", authHandler.Register)
+			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/logout", authHandler.Logout)
+			authGroup.GET("/me", middleware.Auth(client), authHandler.Me)
+			authGroup.PUT("/password", middleware.Auth(client), authHandler.ChangePassword)
+
+			// OIDC routes
+			if oidcProvider != nil {
+				authGroup.GET("/oidc/login", oidcProvider.HandleLogin)
+				authGroup.GET("/oidc/callback", oidcProvider.HandleCallback)
+			}
 		}
 
 		designHandler := handlers.NewDesignHandler(client)
