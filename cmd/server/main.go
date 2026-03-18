@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"pindou/internal/auth"
 	"pindou/internal/config"
 	"pindou/internal/database"
@@ -12,7 +13,6 @@ import (
 	"pindou/internal/middleware"
 	"pindou/internal/version"
 	"pindou/web"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
