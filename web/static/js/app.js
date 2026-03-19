@@ -23,12 +23,114 @@ const S={
   tool:'paint',selColor:PAL[6],colorCnt:48,
   isDown:false,mergeFrom:null,lastImg:null,
   currentDesignId:null,
+  currentTitle:'',
+  suggestedTitle:'',
+  isDirty:false,
   user:null,
   squareMode:true, // true = force square canvas
 };
 
 const bc=document.getElementById('bc');
 const ctx=bc.getContext('2d');
+
+function pad2(n){
+  return String(n).padStart(2,'0');
+}
+
+function generateTimestampTitle(date=new Date()){
+  return `拼豆作品-${date.getFullYear()}${pad2(date.getMonth()+1)}${pad2(date.getDate())}-${pad2(date.getHours())}${pad2(date.getMinutes())}${pad2(date.getSeconds())}`;
+}
+
+function ensureSuggestedTitle(force=false){
+  if(force || !S.suggestedTitle){
+    S.suggestedTitle = generateTimestampTitle();
+  }
+  if(force || !S.currentTitle){
+    S.currentTitle = S.suggestedTitle;
+  }
+  return S.currentTitle;
+}
+
+function markDirty(v=true){
+  S.isDirty = v;
+}
+
+function hasWorkInProgress(){
+  return Boolean(S.grid || S.lastImg);
+}
+
+function confirmDiscardChanges(message='当前有未保存的编辑内容，确定继续吗？'){
+  if(!hasWorkInProgress()) return true;
+  if(!S.isDirty && S.currentDesignId) return true;
+  return window.confirm(message);
+}
+
+function setDesignState(design){
+  S.currentDesignId = design.id || null;
+  S.currentTitle = design.title || generateTimestampTitle();
+  S.suggestedTitle = S.currentTitle;
+  S.W = design.width;
+  S.H = design.height;
+  S.colorCnt = design.color_count;
+  S.grid = design.grid_data;
+  document.getElementById('placeholder').style.display = 'none';
+  bc.style.display = 'block';
+  computeCS();
+  renderAll();
+  updateStats();
+  enableBtns(true);
+  updateSizeUI();
+  updateColorCountUI();
+  updateUserUI();
+  markDirty(false);
+}
+
+function resetEditorState(){
+  S.currentDesignId = null;
+  S.grid = null;
+  S.lastImg = null;
+  ensureSuggestedTitle(true);
+  bc.style.display = 'none';
+  document.getElementById('placeholder').style.display = 'flex';
+  enableBtns(false);
+  resetStats();
+  updateUserUI();
+  markDirty(false);
+}
+
+function updateColorCountUI(){
+  document.querySelectorAll('.col-chip').forEach(chip=>{
+    chip.classList.toggle('on', parseInt(chip.dataset.v,10)===S.colorCnt);
+  });
+}
+
+function resetStats(){
+  document.getElementById('statTitle').textContent='拼豆使用量统计（0 颗）';
+  document.getElementById('statHint').style.display='block';
+  document.getElementById('statHint').textContent='选择图片后可查看颜色统计';
+  document.getElementById('statCards').style.display='none';
+  document.getElementById('statCards').innerHTML='';
+}
+
+function setSize(v){
+  S.W=v;
+  S.H=v;
+  document.getElementById('szRange').value=v;
+  document.getElementById('szNum').textContent=v;
+  document.getElementById('szLabel').textContent=`${v}*${v}`;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',parseInt(c.dataset.v,10)===v));
+}
+
+function resizeGrid(nextSize){
+  if(!S.grid) return;
+  const nextGrid=Array.from({length:nextSize},(_,y)=>Array.from({length:nextSize},(_,x)=>S.grid[y]?.[x]||null));
+  S.grid=nextGrid;
+}
+
+function updateBeanHeightValue(){
+  const bh=document.getElementById('bh').value;
+  document.getElementById('bhV').textContent=bh;
+}
 
 // ============ Auth Functions ============
 let oidcEnabled = false;
@@ -327,23 +429,15 @@ function renderDesignList(designs) {
 }
 
 async function loadDesign(id) {
+  if (!confirmDiscardChanges('当前作品尚未保存，加载其他作品会丢失这些修改，确定继续吗？')) {
+    return;
+  }
   try {
     const res = await fetch(`/api/designs/${id}`);
     if (!res.ok) return;
     const d = await res.json();
-    S.currentDesignId = d.id;
-    S.W = d.width;
-    S.H = d.height;
-    S.colorCnt = d.color_count;
-    S.grid = d.grid_data;
-    document.getElementById('placeholder').style.display = 'none';
-    bc.style.display = 'block';
-    computeCS();
-    renderAll();
-    updateStats();
-    enableBtns(true);
-    updateSizeUI();
-    updateUserUI();
+    S.lastImg = null;
+    setDesignState(d);
   } catch(e) {
     console.error('Failed to load design:', e);
   }
@@ -364,8 +458,9 @@ function showSaveModal() {
   if (!S.user || !S.grid) return;
   const modal = document.getElementById('saveModal');
   const input = document.getElementById('saveTitle');
-  input.value = '我的拼豆作品';
+  input.value = ensureSuggestedTitle();
   modal.classList.remove('hidden');
+  input.select();
   setTimeout(() => input.focus(), 100);
 }
 
@@ -374,7 +469,7 @@ function hideSaveModal() {
 }
 
 async function confirmSave() {
-  const title = document.getElementById('saveTitle').value.trim() || '未命名作品';
+  const title = document.getElementById('saveTitle').value.trim() || ensureSuggestedTitle();
   hideSaveModal();
 
   const data = {
@@ -393,6 +488,10 @@ async function confirmSave() {
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(data)
       });
+      if (res.ok) {
+        const d = await res.json();
+        setDesignState(d);
+      }
     } else {
       res = await fetch('/api/designs', {
         method: 'POST',
@@ -401,10 +500,13 @@ async function confirmSave() {
       });
       if (res.ok) {
         const d = await res.json();
-        S.currentDesignId = d.id;
+        setDesignState(d);
       }
     }
     if (res.ok) {
+      S.currentTitle = title;
+      S.suggestedTitle = title;
+      markDirty(false);
       showToast('保存成功！');
       loadDesigns();
       updateUserUI();
@@ -486,8 +588,11 @@ function renderWorkPreview(design) {
 }
 
 async function loadDesignFromPanel(id) {
+  const before = S.currentDesignId;
   await loadDesign(id);
-  hideWorksPanel();
+  if (before !== S.currentDesignId || id === S.currentDesignId) {
+    hideWorksPanel();
+  }
 }
 
 async function deleteDesign(id) {
@@ -532,13 +637,10 @@ async function shareDesignById(id) {
 }
 
 async function newDesign() {
-  S.currentDesignId = null;
-  S.grid = null;
-  S.lastImg = null;
-  bc.style.display = 'none';
-  document.getElementById('placeholder').style.display = 'flex';
-  enableBtns(false);
-  updateUserUI();
+  if (!confirmDiscardChanges('当前有未保存的图片或编辑内容，新建会清空当前画布，确定继续吗？')) {
+    return;
+  }
+  resetEditorState();
 }
 
 async function shareDesign() {
@@ -587,6 +689,7 @@ function processImg(img){
   }));
   computeCS();renderAll();updateStats();
   enableBtns(true);
+  markDirty(true);
 }
 
 function computeCS(){
@@ -666,10 +769,12 @@ function paintAt(x,y){
   if(x<0||x>=S.W||y<0||y>=S.H)return;
   if(S.tool==='erase')S.grid[y][x]=null;
   else if(S.tool==='paint'&&S.selColor)S.grid[y][x]=S.selColor;
+  markDirty(true);
 }
 function mergeColor(fromId,toColor){
   for(let y=0;y<S.H;y++)for(let x=0;x<S.W;x++)
     if(S.grid[y][x]?.id===fromId)S.grid[y][x]=toColor;
+  markDirty(true);
   renderAll();updateStats();
 }
 
@@ -701,25 +806,26 @@ function updateSizeUI(){
 }
 
 document.getElementById('szRange').addEventListener('input',e=>{
-  const v=parseInt(e.target.value);S.W=S.H=v;
-  document.getElementById('szNum').textContent=v;
-  document.getElementById('szLabel').textContent=v+'*'+v;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',parseInt(c.dataset.v)===v));
+  const v=parseInt(e.target.value,10);
+  if(S.grid && !S.lastImg) resizeGrid(v);
+  setSize(v);
+  if(S.lastImg)processImg(S.lastImg);
+  else if(S.grid){markDirty(true);computeCS();renderAll();updateStats();}
 });
 document.getElementById('sizeChips').addEventListener('click',e=>{
   const chip=e.target.closest('.chip');if(!chip)return;
-  const v=parseInt(chip.dataset.v);S.W=S.H=v;
-  document.getElementById('szRange').value=v;
-  document.getElementById('szNum').textContent=v;
-  document.getElementById('szLabel').textContent=v+'*'+v;
-  document.querySelectorAll('.chip').forEach(c=>c.classList.toggle('on',c===chip));
+  const v=parseInt(chip.dataset.v,10);
+  if(S.grid && !S.lastImg) resizeGrid(v);
+  setSize(v);
   if(S.lastImg)processImg(S.lastImg);
+  else if(S.grid){markDirty(true);computeCS();renderAll();updateStats();}
 });
 document.getElementById('colChips').addEventListener('click',e=>{
   const chip=e.target.closest('.col-chip');if(!chip)return;
-  S.colorCnt=parseInt(chip.dataset.v);
-  document.querySelectorAll('.col-chip').forEach(c=>c.classList.toggle('on',c===chip));
+  S.colorCnt=parseInt(chip.dataset.v,10);
+  updateColorCountUI();
   if(S.lastImg)processImg(S.lastImg);
+  else if(S.grid){markDirty(true);updateStats();}
 });
 
 document.getElementById('tgGrid').addEventListener('click',()=>{S.showGrid=!S.showGrid;document.getElementById('tgGrid').textContent=S.showGrid?'显示':'隐藏';document.getElementById('tgGrid').classList.toggle('on',S.showGrid);renderAll();});
@@ -727,7 +833,7 @@ document.getElementById('tgCode').addEventListener('click',()=>{S.showCode=!S.sh
 document.getElementById('tgStat').addEventListener('click',()=>{const btn=document.getElementById('tgStat');const cards=document.getElementById('statCards');const isOn=btn.classList.toggle('on');btn.textContent=isOn?'显示':'隐藏';cards.style.display=isOn?'flex':'none';});
 document.getElementById('tgOrig').addEventListener('click',()=>{const btn=document.getElementById('tgOrig');S.showOrig=btn.classList.toggle('on');btn.textContent=S.showOrig?'显示':'隐藏';});
 document.getElementById('tgGuide').addEventListener('click',()=>{S.guideOn=!S.guideOn;document.getElementById('tgGuide').textContent=S.guideOn?'已开启':'已关闭';document.getElementById('tgGuide').classList.toggle('on',S.guideOn);renderAll();});
-document.getElementById('tgFlip').addEventListener('click',()=>{if(S.grid){for(let y=0;y<S.H;y++)S.grid[y].reverse();renderAll();}});
+document.getElementById('tgFlip').addEventListener('click',()=>{if(S.grid){for(let y=0;y<S.H;y++)S.grid[y].reverse();markDirty(true);renderAll();updateStats();}});
 document.getElementById('tgSq').addEventListener('click',()=>{
   S.squareMode = !S.squareMode;
   const btn = document.getElementById('tgSq');
@@ -743,11 +849,12 @@ document.getElementById('guideColor').addEventListener('input',e=>{S.guideCol=e.
 document.getElementById('fileIn').addEventListener('change',e=>{
   const f=e.target.files[0];if(!f)return;
   const reader=new FileReader();
-  reader.onload=ev=>{const img=new Image();img.onload=()=>{S.lastImg=img;document.getElementById('placeholder').style.display='none';bc.style.display='block';processImg(img);updateUserUI();};img.src=ev.target.result;};
+  reader.onload=ev=>{const img=new Image();img.onload=()=>{S.currentDesignId=null;ensureSuggestedTitle(true);S.lastImg=img;document.getElementById('placeholder').style.display='none';bc.style.display='block';processImg(img);updateUserUI();};img.src=ev.target.result;};
   reader.readAsDataURL(f);
+  e.target.value='';
 });
 document.getElementById('btnRegen').addEventListener('click',()=>{if(S.lastImg)processImg(S.lastImg);});
-document.getElementById('btnClear').addEventListener('click',()=>{if(S.grid){S.grid=Array.from({length:S.H},()=>Array(S.W).fill(null));renderAll();updateStats();}});
+document.getElementById('btnClear').addEventListener('click',()=>{if(S.grid){S.grid=Array.from({length:S.H},()=>Array(S.W).fill(null));markDirty(true);renderAll();updateStats();}});
 
 function doExport(){
   if(!S.grid)return;
@@ -776,7 +883,7 @@ function enableBtns(v){
 }
 
 let threeRef=null;
-function open3D(){document.getElementById('modalBg').classList.add('open');if(S.grid)init3D();}
+function open3D(){document.getElementById('modalBg').classList.add('open');updateBeanHeightValue();if(S.grid)init3D();}
 function close3D(){document.getElementById('modalBg').classList.remove('open');}
 document.getElementById('btn3D').addEventListener('click',open3D);
 document.getElementById('btn3D2').addEventListener('click',open3D);
@@ -789,6 +896,7 @@ function init3D(){
   const c2=tc.getContext('2d');
   let angle={x:0.4,y:0.5};
   let isDrag=false,lastM={x:0,y:0};
+  let zoom=1;
 
   function project(px,py,pz){
     const cosX=Math.cos(angle.x),sinX=Math.sin(angle.x);
@@ -800,23 +908,46 @@ function init3D(){
   }
 
   function render(){
-    const bh=parseInt(document.getElementById('bh').value)||3;
+    const bh=parseInt(document.getElementById('bh').value,10)||3;
+    updateBeanHeightValue();
     c2.clearRect(0,0,W,H);
-    c2.fillStyle='#F5F5F5';c2.fillRect(0,0,W,H);
+    const bgGrad=c2.createLinearGradient(0,0,W,H);
+    bgGrad.addColorStop(0,'#fffaf6');
+    bgGrad.addColorStop(1,'#f2f2f2');
+    c2.fillStyle=bgGrad;c2.fillRect(0,0,W,H);
     const GW=S.W,GH=S.H;
     for(let y=GH-1;y>=0;y--)for(let x=0;x<GW;x++){
       const cell=S.grid[y][x];if(!cell)continue;
-      const cx=(x-GW/2)*6.5,cy=-(y-GH/2)*6.5;
+      const cx=(x-GW/2)*7*zoom,cy=-(y-GH/2)*7*zoom;
       const bot=project(cx+3.25,cy-3.25,0);
-      const top=project(cx+3.25,cy-3.25,bh*1.5);
-      const r=Math.max(1.5,3.8*bot.sc);
+      const depth=bh*3.2;
+      const top=project(cx+3.25,cy-3.25,depth);
+      const r=Math.max(1.8,4.1*bot.sc*zoom);
       const cr=h2r(cell.h);
-      c2.fillStyle=`rgb(${Math.min(cr.r+25,255)},${Math.min(cr.g+25,255)},${Math.min(cr.b+25,255)})`;
-      c2.beginPath();c2.arc(bot.sx,bot.sy,r,0,Math.PI*2);c2.fill();
-      if(bh>1){
-        c2.fillStyle=`rgb(${Math.min(cr.r+55,255)},${Math.min(cr.g+55,255)},${Math.min(cr.b+55,255)})`;
-        c2.beginPath();c2.arc(top.sx,top.sy,Math.max(1,2.8*top.sc),0,Math.PI*2);c2.fill();
+      const edge=`rgb(${Math.max(cr.r-40,0)},${Math.max(cr.g-40,0)},${Math.max(cr.b-40,0)})`;
+      const side=`rgb(${Math.max(cr.r-10,0)},${Math.max(cr.g-10,0)},${Math.max(cr.b-10,0)})`;
+      const topColor=`rgb(${Math.min(cr.r+40,255)},${Math.min(cr.g+40,255)},${Math.min(cr.b+40,255)})`;
+
+      if(bh>0){
+        c2.strokeStyle='rgba(0,0,0,0.08)';
+        c2.fillStyle=side;
+        c2.beginPath();
+        c2.moveTo(bot.sx-r,bot.sy);
+        c2.lineTo(top.sx-r*0.8,top.sy);
+        c2.lineTo(top.sx+r*0.8,top.sy);
+        c2.lineTo(bot.sx+r,bot.sy);
+        c2.closePath();
+        c2.fill();
       }
+
+      c2.fillStyle=edge;
+      c2.beginPath();c2.arc(bot.sx,bot.sy,r,0,Math.PI*2);c2.fill();
+
+      c2.fillStyle=topColor;
+      c2.beginPath();c2.arc(top.sx,top.sy,Math.max(1.5,3.2*top.sc*zoom),0,Math.PI*2);c2.fill();
+
+      c2.fillStyle='rgba(255,255,255,0.28)';
+      c2.beginPath();c2.arc(top.sx-r*0.18,top.sy-r*0.2,Math.max(0.8,r*0.32),0,Math.PI*2);c2.fill();
     }
   }
 
@@ -826,11 +957,11 @@ function init3D(){
   tc.onmousemove=e=>{if(!isDrag)return;angle.y+=(e.clientX-lastM.x)*0.01;angle.x+=(e.clientY-lastM.y)*0.01;lastM={x:e.clientX,y:e.clientY};render()};
   tc.onmouseup=()=>isDrag=false;
   tc.onmouseleave=()=>isDrag=false;
-  tc.onwheel=e=>{e.preventDefault();render()};
+  tc.onwheel=e=>{e.preventDefault();zoom=Math.min(1.8,Math.max(0.6,zoom-(e.deltaY*0.0015)));render()};
   render();
 }
 
-document.getElementById('bh').addEventListener('input',()=>{if(threeRef)threeRef.render()});
+document.getElementById('bh').addEventListener('input',()=>{updateBeanHeightValue();if(threeRef)threeRef.render()});
 
 function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 

@@ -22,10 +22,12 @@ type Config struct {
 func Load() *Config {
 	home, _ := os.UserHomeDir()
 	dataDir := filepath.Join(home, ".pindou")
-	os.MkdirAll(dataDir, 0755)
+	_ = os.MkdirAll(dataDir, 0o755)
+
+	databasePath := getEnv("DATABASE_PATH", filepath.Join(dataDir, "pindou.db"))
 
 	return &Config{
-		DatabasePath:     filepath.Join(dataDir, "pindou.db"),
+		DatabasePath:     databasePath,
 		Port:             getEnv("PORT", "8080"),
 		SessionSecret:    getEnv("SESSION_SECRET", "pindou-secret-key-change-in-production"),
 		OIDCClientID:     os.Getenv("PINDOU_OIDC_CLIENT_ID"),

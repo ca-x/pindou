@@ -43,7 +43,7 @@ docker run -d -p 8080:8080 -v pindou-data:/app/data czyt/pindou:latest
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `PORT` | 服务端口 | `8080` |
-| `DATABASE_PATH` | 数据库路径 | `./data/pindou.db` |
+| `DATABASE_PATH` | 数据库路径 | `$HOME/.pindou/pindou.db` |
 | `SESSION_SECRET` | Session 密钥 | 随机生成 |
 
 ## 使用说明
