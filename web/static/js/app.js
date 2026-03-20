@@ -773,6 +773,16 @@ function nearest(r,g,b,pal){
 }
 function buildPal(cnt){return PAL.slice(0,Math.min(cnt,PAL.length))}
 
+function reMapColorsInGrid(){
+  if(!S.grid)return;
+  const pal=buildPal(S.colorCnt);
+  for(let y=0;y<S.H;y++)for(let x=0;x<S.W;x++){
+    const c=S.grid[y]?.[x];if(!c)continue;
+    const cr=h2r(c.h);
+    S.grid[y][x]=nearest(cr.r,cr.g,cr.b,pal);
+  }
+}
+
 function processImg(img){
   pushHistory(snapshotState());
   const off=document.getElementById('offC');
@@ -924,11 +934,13 @@ document.getElementById('sizeChips').addEventListener('click',e=>{
 });
 document.getElementById('colChips').addEventListener('click',e=>{
   const chip=e.target.closest('.col-chip');if(!chip)return;
+  const newCnt=parseInt(chip.dataset.v,10);
+  if(newCnt===S.colorCnt)return;
   const previous=snapshotState();
-  S.colorCnt=parseInt(chip.dataset.v,10);
+  S.colorCnt=newCnt;
   updateColorCountUI();
   if(S.lastImg)processImg(S.lastImg);
-  else if(S.grid){pushHistory(previous);markDirty(true);updateStats();}
+  else if(S.grid){pushHistory(previous);markDirty(true);reMapColorsInGrid();renderAll();updateStats();}
 });
 
 document.getElementById('tgGrid').addEventListener('click',()=>{S.showGrid=!S.showGrid;document.getElementById('tgGrid').textContent=S.showGrid?'显示':'隐藏';document.getElementById('tgGrid').classList.toggle('on',S.showGrid);renderAll();});
